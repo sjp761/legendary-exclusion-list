@@ -1,4 +1,4 @@
 """Legendary!"""
 
-__version__ = '0.20.35'
-__codename__ = 'Lowlife'
+__version__ = '0.20.36'
+__codename__ = 'Urban Flight (Heroic)'
