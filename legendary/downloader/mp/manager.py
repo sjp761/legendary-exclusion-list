@@ -2,8 +2,10 @@
 
 # please don't look at this code too hard, it's a mess.
 
+from fnmatch import fnmatch
 import logging
 import os
+from pathlib import PurePath
 import time
 
 from collections import Counter, defaultdict, deque
@@ -91,9 +93,17 @@ class DLManager(Process):
         self.num_processed_since_last = 0
         self.num_tasks_processed_since_last = 0
 
+    @staticmethod
+    def matches(file, excludelist):
+        for pattern in excludelist:
+            if PurePath(file).full_match(pattern):
+                return True
+        return False
+
     def run_analysis(self, manifest: Manifest, old_manifest: Manifest = None,
                      patch=True, resume=True, file_prefix_filter=None,
-                     file_exclude_filter=None, file_install_tag=None,
+                     file_exclude_filter=None, file_exclude_configured=None,
+                     file_install_tag=None,
                      read_files=False,
                      processing_optimization=False) -> AnalysisResult:
         """
@@ -106,6 +116,7 @@ class DLManager(Process):
         :param resume: Continue based on resume file if it exists
         :param file_prefix_filter: Only download files that start with this prefix
         :param file_exclude_filter: Exclude files with this prefix from download
+        :param file_exclude_configured: Exclude files based on configured patterns
         :param file_install_tag: Only install files with the specified tag
         :param read_files: Allow reading from already finished files
         :param processing_optimization: Attempt to optimize processing order and RAM usage
@@ -197,6 +208,14 @@ class DLManager(Process):
             files_to_skip = set(i.filename for i in manifest.file_manifest_list.elements if
                                 any(i.filename.lower().startswith(pfx) for pfx in file_exclude_filter))
             self.log.info(f'Found {len(files_to_skip)} files to skip based on exclude prefix.')
+            mc.added -= files_to_skip
+            mc.changed -= files_to_skip
+            mc.unchanged |= files_to_skip
+
+        if file_exclude_configured:
+            if isinstance(file_exclude_configured, str):
+                file_exclude_configured = [file_exclude_configured]
+            files_to_skip = set(i.filename for i in manifest.file_manifest_list.elements if DLManager.matches(i.filename.lower().replace('/', os.sep).replace('\\', os.sep), file_exclude_configured))
             mc.added -= files_to_skip
             mc.changed -= files_to_skip
             mc.unchanged |= files_to_skip

@@ -1528,12 +1528,22 @@ class LegendaryCore:
                         resume_file=resume_file, status_q=status_q,
                         max_shared_memory=max_shm * 1024 * 1024, max_workers=max_workers,
                         dl_timeout=dl_timeout, bind_ip=bind_ip)
+        
+        exclude_file_path = os.path.join(self.lgd.path, "exclude", game.app_name)
+        self.log.info(f'Using exclude file if it exists: {exclude_file_path}')
+
+        try:
+            with open(exclude_file_path, 'r') as f:
+                file_exclude_configured = [line.strip().replace('/', os.sep).replace('\\', os.sep).lower() for line in f if line.strip()]
+        except Exception:
+            file_exclude_configured = []
 
         analysis_kwargs = dict(
             old_manifest=old_manifest,
             patch=not disable_patching, resume=not force,
             file_prefix_filter=file_prefix_filter,
             file_exclude_filter=file_exclude_filter,
+            file_exclude_configured=file_exclude_configured,
             file_install_tag=file_install_tag,
             processing_optimization=process_opt
         )
