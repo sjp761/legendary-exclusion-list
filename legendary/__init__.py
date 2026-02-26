@@ -1,4 +1,4 @@
 """Legendary!"""
 
-__version__ = '0.20.41'
-__codename__ = 'Freeman Pontifex (Heroic)'
+__version__ = '0.20.42'
+__codename__ = 'Riding Shotgun (Heroic)'
