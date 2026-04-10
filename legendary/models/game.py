@@ -93,14 +93,7 @@ class Game:
     def third_party_store(self) -> Optional[str]:
         if not self.metadata:
             return None
-
-        custom_attributes: dict[str, dict] = self.metadata.get('customAttributes', {})
-        for key in ['ThirdPartyManagedApp', 'ThirdPartyManagedProvider']:
-            if key not in custom_attributes:
-                continue
-            return custom_attributes.get(key).get('value')
-
-        return None
+        return self.metadata.get('customAttributes', {}).get('ThirdPartyManagedApp', {}).get('value', None)
 
     @property
     def partner_link_type(self):
@@ -201,6 +194,7 @@ class InstalledGame:
     save_path: Optional[str] = None
     save_timestamp: Optional[float] = None
     use_signed_url: bool = False
+    is_preloaded: bool = False
 
     @classmethod
     def from_json(cls, json):
@@ -229,6 +223,7 @@ class InstalledGame:
         tmp.egl_guid = json.get('egl_guid', '')
         tmp.install_tags = json.get('install_tags', [])
         tmp.use_signed_url = json.get('use_signed_url', False)
+        tmp.is_preloaded = json.get('is_preloaded', False)
         return tmp
 
 
