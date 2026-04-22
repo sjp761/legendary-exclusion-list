@@ -22,13 +22,13 @@ jobs:
       matrix:
         include:
           - os: windows-2025
-            asset_name: legendary-windows-x86_64.exe
+            asset_name: legendary_windows_x86_64.exe
           - os: windows-11-arm
-            asset_name: legendary-windows-arm64.exe
+            asset_name: legendary_windows_arm64.exe
           - os: macos-15-intel
-            asset_name: legendary-macos-x86_64
+            asset_name: legendary_macos_x86_64
           - os: macos-15
-            asset_name: legendary-macos-arm64
+            asset_name: legendary_macos_arm64
       fail-fast: false
 
     steps:
@@ -88,9 +88,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            asset_name: legendary-linux-x86_64
+            asset_name: legendary_linux_x86_64
           - os: ubuntu-24.04-arm
-            asset_name: legendary-linux-arm64
+            asset_name: legendary_linux_arm64
       fail-fast: false
 
     steps:
