@@ -3,11 +3,11 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - '[0-9]*'
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to release (e.g. v0.20.42). Must already exist.'
+        description: 'Tag to release (e.g. 0.20.43). Must already exist.'
         required: true
         type: string
 
@@ -26,9 +26,9 @@ jobs:
           - os: windows-11-arm
             asset_name: legendary_windows_arm64.exe
           - os: macos-15-intel
-            asset_name: legendary_macos_x86_64
+            asset_name: legendary_macOS_x86_64
           - os: macos-15
-            asset_name: legendary_macos_arm64
+            asset_name: legendary_macOS_arm64
       fail-fast: false
 
     steps:
