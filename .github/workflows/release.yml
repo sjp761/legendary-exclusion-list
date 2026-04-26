@@ -1,0 +1,172 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '[0-9]*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. 0.20.43). Must already exist.'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  pyinstaller:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-2025
+            asset_name: legendary_windows_x86_64.exe
+          - os: windows-11-arm
+            asset_name: legendary_windows_arm64.exe
+          - os: macos-15-intel
+            asset_name: legendary_macOS_x86_64
+          - os: macos-15
+            asset_name: legendary_macOS_arm64
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Dependencies
+        run: pip3 install --requirement requirements.txt
+
+      - name: Build tools
+        run: pip3 install --upgrade setuptools pyinstaller
+
+      - name: Optional dependencies (WebView)
+        run: pip3 install --upgrade pywebview
+        if: runner.os != 'macOS'
+
+      - name: Set strip option on non-Windows
+        id: strip
+        run: echo "option=--strip" >> $GITHUB_OUTPUT
+        if: runner.os != 'Windows'
+
+      - name: Build
+        working-directory: legendary
+        run: pyinstaller
+          --onefile
+          --name legendary
+          ${{ steps.strip.outputs.option }}
+          -i ../assets/windows_icon.ico
+          cli.py
+        env:
+          PYTHONOPTIMIZE: 1
+
+      - name: Rename artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: mv legendary/dist/legendary.exe legendary/dist/${{ matrix.asset_name }}
+
+      - name: Rename artifact (macOS)
+        if: runner.os == 'macOS'
+        run: mv legendary/dist/legendary legendary/dist/${{ matrix.asset_name }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: legendary/dist/${{ matrix.asset_name }}
+          if-no-files-found: error
+
+  zipapp:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            asset_name: legendary_linux_x86_64
+          - os: ubuntu-24.04-arm
+            asset_name: legendary_linux_arm64
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - run: mkdir -p build dist
+
+      - name: Dependencies
+        run: pip3 install --requirement requirements.txt --target build
+
+      - run: cp -r legendary build
+      - run: cp zipapp_main.py build/__main__.py
+
+      - name: Build
+        run: python -m zipapp
+          --output dist/${{ matrix.asset_name }}
+          --python "/usr/bin/env python3"
+          --compress
+          build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: dist/${{ matrix.asset_name }}
+          if-no-files-found: error
+
+  sdist:
+    name: Build sdist + wheel
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - run: pip3 install --upgrade build
+
+      - run: python -m build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: [pyinstaller, zipapp, sdist]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: echo "name=${{ inputs.tag || github.ref_name }}" >> $GITHUB_OUTPUT
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la artifacts
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: ${{ steps.tag.outputs.name }}
+          draft: true
+          generate_release_notes: true
+          files: artifacts/*
+          fail_on_unmatched_files: true
